@@ -1,9 +1,27 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import TodoList from '../components/TodoList';
+
+// Esta línea es importante para que la página siempre cargue los datos más recientes
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const supabase = createServerComponentClient({ cookies });
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Obtener la fecha de hoy en formato YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+
+  // Buscar los 'todos' del usuario para el día de hoy
+  const { data: todos, error } = await supabase
+    .from('todos')
+    .select('id, title, description, status')
+    .eq('user_id', user?.id)
+    .eq('due_date', today);
+
+  if (error) {
+    console.error("Error fetching todos:", error);
+  }
 
   return (
     <div>
@@ -15,21 +33,18 @@ export default async function DashboardPage() {
         {/* Sección de Pendientes del Día */}
         <div className="bg-gray-800 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Pendientes del Día</h2>
-          {/* Aquí irá el componente de la lista de pendientes */}
-          <p className="text-gray-400">Próximamente...</p>
+          <TodoList todos={todos || []} />
         </div>
 
         {/* Sección de Hábitos del Día */}
         <div className="bg-gray-800 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Hábitos del Día</h2>
-          {/* Aquí irá el componente de la lista de hábitos */}
           <p className="text-gray-400">Próximamente...</p>
         </div>
 
         {/* Sección de Enfoque */}
         <div className="bg-gray-800 p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">Tiempo de Enfoque</h2>
-          {/* Aquí irá el componente del cronómetro */}
           <p className="text-gray-400">Próximamente...</p>
         </div>
       </div>
