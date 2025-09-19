@@ -29,9 +29,12 @@ export default async function DashboardLayout({
             <Link href="/dashboard/pendientes" className="text-gray-300 hover:text-white transition-colors">
               Pendientes
             </Link>
-            {/* 👇 ENLACE NUEVO 👇 */}
             <Link href="/dashboard/habitos" className="text-gray-300 hover:text-white transition-colors">
               Hábitos
+            </Link>
+            {/* 👇 ENLACE NUEVO 👇 */}
+            <Link href="/dashboard/enfoque" className="text-gray-300 hover:text-white transition-colors">
+              Enfoque
             </Link>
           </div>
           <div className="flex items-center gap-4">
