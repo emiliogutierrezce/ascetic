@@ -1,7 +1,8 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import TodosTable from '@/app/components/TodosTable';
-import CreateTodoForm from '@/app/components/CreateTodoForm'; // <-- 1. IMPORTAR
+import CreateTodoForm from '@/app/components/CreateTodoForm';
+import NotesList from '@/app/components/NotesList'; // <-- 1. IMPORTAR
 
 export const dynamic = 'force-dynamic';
 
@@ -9,16 +10,19 @@ export default async function PendientesPage() {
   const supabase = createServerComponentClient({ cookies });
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Buscamos TODOS los pendientes del usuario, ordenados por fecha [cite: 17]
-  const { data: todos, error } = await supabase
+  // Búsqueda de Pendientes (sin cambios)
+  const { data: todos } = await supabase
     .from('todos')
     .select('*')
     .eq('user_id', user?.id)
     .order('due_date', { ascending: true });
 
-  if (error) {
-    console.error("Error fetching todos:", error);
-  }
+  // 2. NUEVA BÚSQUEDA DE NOTAS
+  const { data: notes } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('user_id', user?.id)
+    .order('created_at', { ascending: false });
 
   return (
     <div>
@@ -26,10 +30,11 @@ export default async function PendientesPage() {
         <h1 className="text-3xl font-bold">Módulo de Pendientes</h1>
       </div>
 
-      {/* 2. AÑADIR EL NUEVO FORMULARIO */}
       <CreateTodoForm userId={user!.id} />
-
       <TodosTable todos={todos || []} />
+
+      {/* 3. AÑADIR EL NUEVO COMPONENTE DE NOTAS */}
+      <NotesList notes={notes || []} userId={user!.id} />
     </div>
   );
 }
