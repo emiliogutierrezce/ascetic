@@ -1,5 +1,6 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import TodosTable from '@/app/components/TodosTable'; // Usamos el alias '@/' para una ruta más limpia
 
 export const dynamic = 'force-dynamic';
 
@@ -21,8 +22,8 @@ export default async function PendientesPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Módulo de Pendientes</h1>
-      <p>Aquí se mostrará la lista completa de tus pendientes.</p>
-      {/* Próximamente, aquí irá el componente para mostrar la tabla de pendientes */}
+      {/* Reemplazamos el párrafo con nuestro nuevo componente de tabla */}
+      <TodosTable todos={todos || []} />
     </div>
   );
 }
