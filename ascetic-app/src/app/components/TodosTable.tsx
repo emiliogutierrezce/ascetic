@@ -1,7 +1,9 @@
 'use client';
 
-// Definimos un tipo para los datos de los pendientes
-// Asegúrate de que coincida con las columnas de tu tabla 'todos'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation'; // <-- 1. IMPORTAMOS useRouter
+
+// Definimos el tipo para los datos de los pendientes
 type Todo = {
   id: number;
   created_at: string;
@@ -12,6 +14,30 @@ type Todo = {
 };
 
 export default function TodosTable({ todos }: { todos: Todo[] }) {
+  const supabase = createClientComponentClient();
+  const router = useRouter(); // <-- 2. INICIALIZAMOS useRouter
+
+  // 3. FUNCIÓN PARA MANEJAR LA ELIMINACIÓN
+  const handleDelete = async (id: number) => {
+    // Pedimos confirmación antes de borrar
+    if (!confirm('¿Estás seguro de que quieres eliminar este pendiente?')) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('todos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting todo:', error);
+      alert('Hubo un error al eliminar el pendiente.');
+    } else {
+      // Refresca los datos de la página para que la tabla se actualice
+      router.refresh();
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-gray-800 rounded-lg">
@@ -42,9 +68,15 @@ export default function TodosTable({ todos }: { todos: Todo[] }) {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                 {todo.due_date ? new Date(todo.due_date + 'T00:00:00').toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Sin fecha'}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                {/* Próximamente: Botones de Editar y Eliminar */}
-                <a href="#" className="text-indigo-400 hover:text-indigo-300">Editar</a>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                {/* 4. BOTONES DE ACCIONES */}
+                <button className="text-indigo-400 hover:text-indigo-300">Editar</button>
+                <button 
+                  onClick={() => handleDelete(todo.id)}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  Eliminar
+                </button>
               </td>
             </tr>
           ))}
