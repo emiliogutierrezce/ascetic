@@ -1,3 +1,5 @@
+// app/dashboard/layout.tsx
+
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -20,13 +22,16 @@ export default async function DashboardLayout({
     <div className="bg-gray-900 min-h-screen text-white">
       <header className="bg-gray-800 p-4 border-b border-gray-700">
         <nav className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-6"> {/* Contenedor para logo y enlaces */}
+          <div className="flex items-center gap-6">
             <Link href="/dashboard" className="text-2xl font-bold">
               ascetic
             </Link>
-            {/* ENLACE NUEVO AÑADIDO AQUÍ */}
             <Link href="/dashboard/pendientes" className="text-gray-300 hover:text-white transition-colors">
               Pendientes
+            </Link>
+            {/* 👇 ENLACE NUEVO 👇 */}
+            <Link href="/dashboard/habitos" className="text-gray-300 hover:text-white transition-colors">
+              Hábitos
             </Link>
           </div>
           <div className="flex items-center gap-4">
