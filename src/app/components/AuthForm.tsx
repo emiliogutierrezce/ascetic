@@ -6,9 +6,9 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 const customTheme: typeof ThemeSupa = {
   ...ThemeSupa,
   variables: {
-    ...ThemeSupa.variables,
+    ...(ThemeSupa.variables || {}),
     colors: {
-      ...ThemeSupa.variables.colors,
+      ...(ThemeSupa.variables?.colors || {}),
       brand: '#06b6d4', // cyan-500
       brandAccent: '#22d3ee', // cyan-400
       brandButtonText: '#0f172a', // slate-900
@@ -29,12 +29,12 @@ const customTheme: typeof ThemeSupa = {
       anchorTextHoverColor: '#06b6d4', // cyan-500
     },
     space: {
-      ...ThemeSupa.variables.space,
+      ...(ThemeSupa.variables?.space || {}),
       buttonPadding: '0.5rem 1rem',
       inputPadding: '0.5rem 1rem',
     },
     radii: {
-      ...ThemeSupa.variables.radii,
+      ...(ThemeSupa.variables?.radii || {}),
       borderRadiusButton: '0.375rem', // rounded-md
       inputBorderRadius: '0.375rem', // rounded-md
     }
