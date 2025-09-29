@@ -26,7 +26,7 @@ const customTheme: typeof ThemeSupa = {
       messageText: '#94a3b8', // slate-400
       messageTextDanger: '#fb7185', // rose-400
       anchorTextColor: '#94a3b8', // slate-400
-      anchorTextColorHover: '#06b6d4', // cyan-500
+      anchorTextHoverColor: '#06b6d4', // cyan-500
     },
     space: {
       ...ThemeSupa.variables.space,
