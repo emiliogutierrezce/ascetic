@@ -38,55 +38,59 @@ export default function FocusTimer({ userId }: { userId: string; initialDuration
 
   // Load state from localStorage on initial mount
   useEffect(() => {
-    try {
-      const storedStateJSON = localStorage.getItem(STORAGE_KEY);
-      const today = getTodayInMexicoCity();
+    const loadAndRestoreState = async () => {
+      try {
+        const storedStateJSON = localStorage.getItem(STORAGE_KEY);
+        const today = getTodayInMexicoCity();
 
-      if (storedStateJSON) {
-        const storedState: StoredTimerState = JSON.parse(storedStateJSON);
+        if (storedStateJSON) {
+          const storedState: StoredTimerState = JSON.parse(storedStateJSON);
 
-        // Reset if the stored date is not today
-        if (storedState.logDate !== today) {
-          localStorage.removeItem(STORAGE_KEY);
-          setElapsedSeconds(0);
-          setIsActive(false);
-          return;
+          // Reset if the stored date is not today
+          if (storedState.logDate !== today) {
+            localStorage.removeItem(STORAGE_KEY);
+            setElapsedSeconds(0);
+            setIsActive(false);
+            return;
+          }
+
+          let totalElapsed = storedState.savedElapsedTime;
+          let currentlyActive = false;
+
+          // If it was running when the page was closed, calculate offline progress
+          if (storedState.runStartTime) {
+            const offlineProgress = (Date.now() - storedState.runStartTime) / 1000;
+            totalElapsed += offlineProgress;
+            currentlyActive = true;
+          }
+
+          setElapsedSeconds(totalElapsed);
+          setIsActive(currentlyActive);
+
+          // Immediately save the consolidated state back to DB and localStorage
+          if (currentlyActive) {
+              const newState: StoredTimerState = { savedElapsedTime: totalElapsed, runStartTime: Date.now(), logDate: today };
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+              saveDataToSupabase(totalElapsed);
+          }
+
+        } else {
+          // If no stored state, use the initial duration from the server (if any)
+          // This handles the very first load of the day
+          const { data } = await supabase.from('focus_logs').select('duration_seconds').eq('user_id', userId).eq('log_date', today).single();
+          const initialSeconds = data?.duration_seconds || 0;
+          setElapsedSeconds(initialSeconds);
+          const newState: StoredTimerState = { savedElapsedTime: initialSeconds, runStartTime: null, logDate: today };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
         }
-
-        let totalElapsed = storedState.savedElapsedTime;
-        let currentlyActive = false;
-
-        // If it was running when the page was closed, calculate offline progress
-        if (storedState.runStartTime) {
-          const offlineProgress = (Date.now() - storedState.runStartTime) / 1000;
-          totalElapsed += offlineProgress;
-          currentlyActive = true;
-        }
-
-        setElapsedSeconds(totalElapsed);
-        setIsActive(currentlyActive);
-
-        // Immediately save the consolidated state back to DB and localStorage
-        if (currentlyActive) {
-            const newState: StoredTimerState = { savedElapsedTime: totalElapsed, runStartTime: Date.now(), logDate: today };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-            saveDataToSupabase(totalElapsed);
-        }
-
-      } else {
-        // If no stored state, use the initial duration from the server (if any)
-        // This handles the very first load of the day
-        const { data } = await supabase.from('focus_logs').select('duration_seconds').eq('user_id', userId).eq('log_date', today).single();
-        const initialSeconds = data?.duration_seconds || 0;
-        setElapsedSeconds(initialSeconds);
-        const newState: StoredTimerState = { savedElapsedTime: initialSeconds, runStartTime: null, logDate: today };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+      } catch (error) {
+        console.error("Failed to load or process timer state:", error);
+        // Handle potential JSON parsing errors or other issues
+        localStorage.removeItem(STORAGE_KEY);
       }
-    } catch (error) {
-      console.error("Failed to load or process timer state:", error);
-      // Handle potential JSON parsing errors or other issues
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    };
+
+    loadAndRestoreState();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Runs only once on mount
 
