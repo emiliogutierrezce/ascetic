@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "ascetic-app/next.config.ts",
+      "use": "@vercel/next"
+    }
+  ]
+}
