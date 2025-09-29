@@ -2,7 +2,8 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import TodosTable from '@/app/components/TodosTable';
 import CreateTodoForm from '@/app/components/CreateTodoForm';
-import NotesList from '@/app/components/NotesList'; // <-- 1. IMPORTAR
+import CreateNoteForm from '@/app/components/CreateNoteForm'; // <-- Import new form
+import NotesList from '@/app/components/NotesList';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,14 +11,14 @@ export default async function PendientesPage() {
   const supabase = createServerComponentClient({ cookies });
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Búsqueda de Pendientes (sin cambios)
+  // Búsqueda de Pendientes
   const { data: todos } = await supabase
     .from('todos')
     .select('*')
     .eq('user_id', user?.id)
     .order('due_date', { ascending: true });
 
-  // 2. NUEVA BÚSQUEDA DE NOTAS
+  // Búsqueda de Notas
   const { data: notes } = await supabase
     .from('notes')
     .select('*')
@@ -30,10 +31,13 @@ export default async function PendientesPage() {
         <h1 className="text-3xl font-bold">Módulo de Pendientes</h1>
       </div>
 
-      <CreateTodoForm userId={user!.id} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <CreateTodoForm userId={user!.id} />
+        <CreateNoteForm userId={user!.id} />
+      </div>
+      
       <TodosTable todos={todos || []} />
 
-      {/* 3. AÑADIR EL NUEVO COMPONENTE DE NOTAS */}
       <NotesList notes={notes || []} userId={user!.id} />
     </div>
   );

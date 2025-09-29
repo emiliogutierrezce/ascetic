@@ -1,75 +1,84 @@
 'use client';
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getTodayInMexicoCity } from '../../../lib/date';
+import CheckIcon from './icons/CheckIcon';
 
-// Definimos un tipo para los hábitos que recibiremos.
-// Incluirá el hábito en sí y si fue completado hoy.
+// This type now matches the shape provided by DashboardClient
 type Habit = {
   id: number;
   title: string;
-  completions: { status: string }[];
+  user_id: string;
+  status: string; 
 };
 
-export default function HabitList({ habits }: { habits: Habit[] }) {
+type HabitListProps = {
+  habits: Habit[];
+  userId: string;
+  onHabitUpdate: (newStatus: string) => void; // <-- Matches TodoList
+};
+
+export default function HabitList({ habits, userId, onHabitUpdate }: HabitListProps) {
   const supabase = createClientComponentClient();
-  const router = useRouter();
   const [optimisticHabits, setOptimisticHabits] = useState(habits);
 
-  const handleStatusChange = async (habit: Habit) => {
-    const isCompleted = habit.completions.length > 0 && habit.completions[0].status === 'terminado';
-    const newStatus = isCompleted ? 'pendiente' : 'terminado';
+  useEffect(() => {
+    setOptimisticHabits(habits);
+  }, [habits]);
 
-    // Actualización optimista para una UI instantánea
+  // This logic is now identical to TodoList's handler
+  const handleStatusChange = async (id: number, currentStatus: string) => {
+    const newStatus = currentStatus === 'pendiente' ? 'terminado' : 'pendiente';
+
+    // Optimistic UI update
     setOptimisticHabits(currentHabits =>
-      currentHabits.map(h =>
-        h.id === habit.id
-          ? {
-              ...h,
-              completions: [{ status: newStatus }],
-            }
-          : h
-      )
+      currentHabits.map(h => (h.id === id ? { ...h, status: newStatus } : h))
     );
 
-    // Si el hábito estaba completado, actualizamos la entrada existente.
-    // Si no, insertamos una nueva entrada en habit_completions.
-    if (isCompleted) {
-      await supabase
-        .from('habit_completions')
-        .update({ status: newStatus })
-        .eq('habit_id', habit.id)
-        .eq('completion_date', new Date().toISOString().split('T')[0]);
-    } else {
-      await supabase.from('habit_completions').insert({
-        habit_id: habit.id,
+    // Perform the actual database operation in the background
+    let error;
+    if (newStatus === 'terminado') {
+      const { error: insertError } = await supabase.from('habit_completions').insert({
+        habit_id: id,
         status: newStatus,
+        completion_date: getTodayInMexicoCity(),
+        user_id: userId,
       });
+      error = insertError;
+    } else {
+      const { error: deleteError } = await supabase
+        .from('habit_completions')
+        .delete()
+        .eq('habit_id', id)
+        .eq('completion_date', getTodayInMexicoCity());
+      error = deleteError;
     }
 
-    router.refresh(); // Refresca los datos del servidor
+    // If the DB operation is successful, call the parent handler
+    if (!error) {
+      onHabitUpdate(newStatus);
+    }
+    // Note: We are not reverting the optimistic update on error for simplicity,
+    // but in a real-world app, you might want to.
   };
 
   return (
-    <div>
-      {optimisticHabits.length > 0 ? (
+    <div className="w-full">
+      {optimisticHabits && optimisticHabits.length > 0 ? (
         <ul className="space-y-3">
           {optimisticHabits.map((habit) => {
-            const isCompleted = habit.completions.length > 0 && habit.completions[0].status === 'terminado';
+            const isCompleted = habit.status === 'terminado';
             return (
               <li
                 key={habit.id}
-                className="flex items-center gap-3 p-3 bg-gray-700 rounded-md cursor-pointer hover:bg-gray-600 transition-colors"
-                onClick={() => handleStatusChange(habit)}
+                className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3 transition-colors hover:bg-slate-800/50 cursor-pointer"
+                onClick={() => handleStatusChange(habit.id, habit.status)}
               >
-                <input
-                  type="checkbox"
-                  checked={isCompleted}
-                  readOnly
-                  className="h-5 w-5 rounded bg-gray-800 border-gray-600 text-green-500 focus:ring-green-600"
-                />
-                <span className={`text-lg ${isCompleted ? 'line-through text-gray-500' : ''}`}>
+                <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm border-2 transition-colors ${isCompleted ? 'bg-cyan-500 border-cyan-500' : 'border-slate-600'}`}>
+                  {isCompleted && <CheckIcon className="h-3 w-3 text-slate-950" />}
+                </div>
+                <span className={`text-sm font-medium ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
                   {habit.title}
                 </span>
               </li>
@@ -77,7 +86,9 @@ export default function HabitList({ habits }: { habits: Habit[] }) {
           })}
         </ul>
       ) : (
-        <p className="text-gray-400">Aún no has definido hábitos. ¡Ve al módulo de hábitos para empezar!</p>
+        <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-slate-700/80">
+          <p className="text-sm text-slate-500">No has definido hábitos. ¡Ve a la sección de hábitos para empezar!</p>
+        </div>
       )}
     </div>
   );

@@ -1,104 +1,102 @@
 'use client';
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
+import { getTodayInMexicoCity } from '../../../lib/date';
 
-// Recibimos el ID del usuario y el tiempo inicial de hoy desde el dashboard
-export default function FocusTimer({
-  userId,
-  initialDuration,
-}: {
-  userId: string;
-  initialDuration: number;
-}) {
+// --- Icons ---
+const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>;
+const PauseIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>;
+
+export default function FocusTimer({ userId, initialDuration }: { userId: string; initialDuration: number; }) {
+  const TEN_HOURS_IN_SECONDS = 10 * 60 * 60;
   const supabase = createClientComponentClient();
-  const router = useRouter();
 
-  // Estado para el tiempo total acumulado hoy (en segundos)
-  const [totalSeconds, setTotalSeconds] = useState(initialDuration);
-  // Estado para saber si el cronómetro está activo
+  const [remainingSeconds, setRemainingSeconds] = useState(initialDuration);
   const [isActive, setIsActive] = useState(false);
-  // Estado para guardar el ID del registro de hoy y no tener que buscarlo cada vez
-  const [logId, setLogId] = useState<number | null>(null);
 
-  // --- Efecto para manejar el contador ---
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isActive) {
-      interval = setInterval(() => {
-        setTotalSeconds((seconds) => seconds + 1);
-      }, 1000);
-    } else if (!isActive && totalSeconds !== 0) {
-      clearInterval(interval!);
-    }
-    return () => clearInterval(interval!);
-  }, [isActive, totalSeconds]);
-
-  // --- Función para guardar el progreso en Supabase ---
-  // Usamos useCallback para que la función no se recree en cada render
-  const saveData = useCallback(async () => {
+  const saveData = useCallback(async (secondsToSave: number) => {
     if (!userId) return;
-
-    const today = new Date().toISOString().split('T')[0];
-
-    // 'upsert' intenta actualizar una fila existente. Si no la encuentra, la crea.
-    // Esto es perfecto para nuestro caso de uso.
-    const { error } = await supabase.from('focus_logs').upsert({
+    const today = getTodayInMexicoCity();
+    await supabase.from('focus_logs').upsert({
       user_id: userId,
       log_date: today,
-      duration_seconds: totalSeconds,
-    }).select();
+      duration_seconds: secondsToSave,
+    });
+    // No need to call router.refresh() here as it won't re-trigger client component effects
+  }, [userId, supabase]);
 
-    if (error) {
-      console.error('Error saving focus time:', error);
-    }
-    router.refresh(); // Actualiza los datos del servidor
-  }, [totalSeconds, userId, supabase, router]);
-
-  // --- Efecto para guardar datos cada 60 segundos ---
   useEffect(() => {
-    const saveInterval = setInterval(() => {
-      if (isActive) {
-        saveData();
-      }
-    }, 60000); // 60000 ms = 1 minuto
-
-    return () => clearInterval(saveInterval);
-  }, [isActive, saveData]);
-
-  // --- Función para alternar el estado del cronómetro (play/pause) ---
-  const toggleTimer = () => {
-    setIsActive(!isActive);
-    // Si estamos pausando, guardamos inmediatamente
-    if (isActive) {
-      saveData();
+    let interval: NodeJS.Timeout | null = null;
+    if (isActive && remainingSeconds > 0) {
+      interval = setInterval(() => {
+        setRemainingSeconds(sec => {
+          if (sec > 1) return sec - 1;
+          // When it hits 1, it will become 0 and we stop.
+          setIsActive(false);
+          return 0;
+        });
+      }, 1000);
+    } else if (interval) {
+      clearInterval(interval);
     }
+    return () => { if (interval) clearInterval(interval); };
+  }, [isActive, remainingSeconds]);
+
+  const toggleTimer = () => {
+    if (isActive) saveData(remainingSeconds);
+    setIsActive(!isActive);
   };
 
-  // --- Funciones para formatear el tiempo a HH:MM:SS ---
   const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
   };
+
+  const radius = 80;
+  const circumference = 2 * Math.PI * radius;
+  const progress = remainingSeconds / TEN_HOURS_IN_SECONDS;
+  const offset = circumference * progress;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <p className="text-5xl font-mono" suppressHydrationWarning>
-        {formatTime(totalSeconds)}
-      </p>
-      <button
-        onClick={toggleTimer}
-        className={`px-6 py-2 rounded-md font-bold text-white transition-colors ${
-          isActive
-            ? 'bg-yellow-600 hover:bg-yellow-700'
-            : 'bg-green-600 hover:bg-green-700'
-        }`}
-      >
-        {isActive ? 'Pausar' : 'Iniciar'}
-      </button>
+    <div className="flex flex-col items-center justify-center gap-6 w-full">
+      <div className="relative h-52 w-52">
+        <svg className="absolute top-0 left-0 h-full w-full" viewBox="0 0 200 200">
+          {/* Background track */}
+          <circle cx="100" cy="100" r={radius} strokeWidth="8" className="stroke-slate-800" fill="none" />
+          {/* Progress ring */}
+          <circle
+            cx="100"
+            cy="100"
+            r={radius}
+            strokeWidth="8"
+            className="stroke-cyan-400 transition-all duration-1000 ease-linear"
+            fill="none"
+            strokeLinecap="round"
+            transform="rotate(-90 100 100)"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            suppressHydrationWarning
+          />
+        </svg>
+        <div className="absolute top-0 left-0 flex h-full w-full flex-col items-center justify-center">
+          <p className="font-mono text-4xl font-bold tracking-tighter text-slate-200" suppressHydrationWarning>
+            {formatTime(remainingSeconds)}
+          </p>
+          <p className="text-sm text-slate-500">Tiempo Restante</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center w-full">
+        <button 
+          onClick={toggleTimer} 
+          disabled={remainingSeconds === 0}
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 transition-transform hover:scale-105 disabled:bg-slate-700 disabled:shadow-none disabled:scale-100 disabled:cursor-not-allowed">
+          {isActive ? <PauseIcon className="h-8 w-8" /> : <PlayIcon className="h-8 w-8" />}
+        </button>
+      </div>
     </div>
   );
 }

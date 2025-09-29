@@ -12,12 +12,17 @@ export default async function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-white">
-      <div className="container flex flex-col items-center justify-center gap-6 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-4">
+      <div className="container flex max-w-lg flex-col items-center justify-center text-center">
+        <h1 className="font-mono text-5xl font-bold text-cyan-400 drop-shadow-[0_0_10px_theme(colors.cyan.500/0.5)] sm:text-6xl">
           ascetic
         </h1>
-        <AuthForm />
+        <p className="mt-4 text-slate-400">
+          A minimalist toolkit for focus and discipline.
+        </p>
+        <div className="mt-8 w-full">
+          <AuthForm />
+        </div>
       </div>
     </main>
   )
