@@ -1,31 +1,35 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Manejador principal de la función
+// Function to get today's date in YYYY-MM-DD format for a specific timezone
+const getTodayDateString = (timeZone: string): string => {
+  // Uses en-CA locale to get the YYYY-MM-DD format reliably.
+  return new Date().toLocaleDateString('en-CA', { timeZone });
+};
+
+// Main function handler
 Deno.serve(async (req) => {
   try {
-    // Crea un cliente de Supabase con permisos de administrador
+    // Create a Supabase client with admin privileges
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Calcula el inicio del día actual en UTC
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const startOfTodayUTC = today.toISOString();
+    // Get today's date in Mexico City
+    const todayInMexicoCity = getTodayDateString('America/Mexico_City');
 
-    // Ejecuta la consulta para borrar los pendientes completados de días anteriores
+    // Delete todos that were marked as 'terminado' and are from a previous day
     const { error } = await supabaseAdmin
       .from('todos')
       .delete()
       .eq('status', 'terminado')
-      .lt('updated_at', startOfTodayUTC);
+      .lt('due_date', todayInMexicoCity);
 
     if (error) {
       throw error;
     }
 
-    return new Response(JSON.stringify({ message: "Tareas completadas antiguas han sido eliminadas." }), {
+    return new Response(JSON.stringify({ message: "Completed todos from previous days have been deleted." }), {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     });

@@ -7,8 +7,6 @@ import { getTodayInMexicoCity } from '../../../lib/date';
 // --- Icons ---
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>;
 const PauseIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>;
-const ResetIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" /></svg>;
-
 const STORAGE_KEY = 'focusTimerState';
 
 // Type for the state saved in localStorage
@@ -137,17 +135,6 @@ export default function FocusTimer({ userId }: { userId: string; initialDuration
     }
   };
 
-  const handleReset = async () => {
-    if (confirm('¿Seguro que quieres reiniciar el contador de hoy?')) {
-        setIsActive(false);
-        setElapsedSeconds(0);
-        const today = getTodayInMexicoCity();
-        const newState: StoredTimerState = { savedElapsedTime: 0, runStartTime: null, logDate: today };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-        await saveDataToSupabase(0);
-    }
-  }
-
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
     const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -192,11 +179,6 @@ export default function FocusTimer({ userId }: { userId: string; initialDuration
           onClick={toggleTimer} 
           className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 transition-transform hover:scale-105 disabled:bg-slate-700 disabled:shadow-none disabled:scale-100 disabled:cursor-not-allowed">
           {isActive ? <PauseIcon className="h-8 w-8" /> : <PlayIcon className="h-8 w-8" />}
-        </button>
-        <button 
-          onClick={handleReset} 
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-slate-300 transition-colors hover:bg-slate-600">
-          <ResetIcon className="h-6 w-6" />
         </button>
       </div>
     </div>
